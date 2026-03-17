@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: shipment
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  migrate:
+    image: ghcr.io/pressly/goose:latest
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./internal/infrastructure/persistence/postgres/migrations:/migrations
+    command:
+      [
+        "goose",
+        "-dir", "/migrations",
+        "postgres",
+        "host=postgres port=5432 user=postgres password=postgres dbname=shipment sslmode=disable",
+        "up",
+      ]
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "50051:50051"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - ./config.docker.yml:/app/config.yml:ro
+
+volumes:
+  pgdata:

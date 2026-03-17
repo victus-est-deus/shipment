@@ -1,0 +1,8 @@
+.git
+.gitignore
+shipment-server
+storage/
+*.md
+config.yml
+config.testing.yml
+config.docker.yml
